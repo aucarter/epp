@@ -180,6 +180,9 @@ simmod.eppfp <- function(fp, VERSION = "C"){
     fp$eppmod <- "rspline" # if missing assume r-spline (backward compatibility)
   
   if(VERSION != "R"){
+    fp$mortyears <- nrow(fp$cd4artmort)/7
+    fp$cd4years <- nrow(fp$cd4artmort)/7
+    fp$cd4prog <- as.matrix(fp$cd4prog)
     eppmodInt <- as.integer(fp$eppmod == "rtrend") # 0: r-spline; 1: r-trend
     mod <- .Call(eppC, fp$epp.pop.ts, fp$proj.steps, fp$dt,
                  eppmodInt,
@@ -187,7 +190,7 @@ simmod.eppfp <- function(fp, VERSION = "C"){
                  fp$rtrend$beta, fp$rtrend$tStabilize, fp$rtrend$r0,
                  fp$cd4init, fp$cd4prog, fp$cd4artmort,
                  fp$artnum.ts, as.integer(fp$artelig.idx.ts), as.integer(fp$art_isperc.ts), fp$specpop.percelig.ts,
-                 fp$hivp15yr.cd4dist, fp$art15yr.cd4dist)
+                 fp$hivp15yr.cd4dist, fp$art15yr.cd4dist, as.integer(fp$mortyears), as.integer(fp$cd4years))
     class(mod) <- "epp"
     return(mod)
   }
