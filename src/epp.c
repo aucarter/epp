@@ -25,7 +25,7 @@ SEXP eppC(SEXP s_eppPopTS, SEXP s_projsteps, SEXP s_dt,
 	  SEXP s_rtrend_beta, SEXP s_rtrend_tstabilize, SEXP s_rtrend_r0,
 	  SEXP s_cd4init, SEXP s_cd4prog, SEXP s_cd4artmort,
 	  SEXP s_artnumTS, SEXP s_arteligidxTS, SEXP s_artispercTS, SEXP s_specpop_perceligTS,
-	  SEXP s_hivp15yr_cd4dist, SEXP s_art15yr_cd4dist){
+	  SEXP s_hivp15yr_cd4dist, SEXP s_art15yr_cd4dist, SEXP s_mortyears, SEXP s_cd4years){
 
   size_t nsteps = length(s_projsteps);
   double dt = *REAL(s_dt);
@@ -54,13 +54,20 @@ SEXP eppC(SEXP s_eppPopTS, SEXP s_projsteps, SEXP s_dt,
     rtrend_tstab = *REAL(s_rtrend_tstabilize);
     rtrend_r0 = *REAL(s_rtrend_r0);
   }
+  int mortyears = *INTEGER(s_mortyears);
+  int cd4years = *INTEGER(s_cd4years);
 
   double *cd4init = REAL(s_cd4init);
-  double *cd4prog = REAL(s_cd4prog);
-  double cd4artmort[DS-1][TS];
-  for(size_t m = 0; m < DS-1; m++)
-    for(size_t u = 0; u < TS; u++)
-      cd4artmort[m][u] = REAL(s_cd4artmort)[m + (DS-1)*u];
+  double cd4prog[cd4years][DS-2];
+  for (int i = 0; i < cd4years; ++i)
+    for (int m = 0; m < DS-2; ++m)
+      cd4prog[i][m] = REAL(s_cd4prog)[i + (cd4years-1)*m];
+
+  double cd4artmort[(DS-1)*(mortyears)][TS];
+  for(size_t y = 0; y < mortyears; y++)
+    for(size_t m = 0; m < DS-1; m++)
+      for(size_t u = 0; u < TS; u++)
+        cd4artmort[m+y*(DS-1)][u] = REAL(s_cd4artmort)[m + (DS-1)*y + (DS-1)*(mortyears)*u];
 
   // array cd4artmort_alt = {2, INTEGER(getAttrib(s_cd4artmort, R_DimSymbol)), REAL(s_cd4artmort)};
 
@@ -154,9 +161,19 @@ SEXP eppC(SEXP s_eppPopTS, SEXP s_projsteps, SEXP s_dt,
       grad[m][0] += X[0][0] * incrate * cd4init[m-1];
 
     // disease progression and mortality
+    int step_size = 1/dt;
+    int cd4prog_i = floor(ts/step_size);
+    if (cd4prog_i > (cd4years-1))
+      cd4prog_i = (cd4years-1);
+
+    // double curr_prog[DS-2];
+    // for (int m=0; m<DS-2; ++m)
+    //   curr_prog[m] = REAL(s_cd4prog)[m];
     for(size_t m = 1; m < (DS-1); m++){  // cd4 stage progression (not on ART)
-      grad[m][0] -= cd4prog[m-1] * X[m][0];
-      grad[m+1][0] += cd4prog[m-1] * X[m][0];
+      // grad[m][0] -= cd4prog[m-1] * X[m][0];
+      // grad[m+1][0] += cd4prog[m-1] * X[m][0];
+      grad[m][0] -= cd4prog[cd4prog_i][m-1] * X[m][0];
+      grad[m+1][0] += cd4prog[cd4prog_i][m-1] * X[m][0];
     }
     for(size_t m = 1; m < DS; m++){
       grad[m][1] -= 2.0 * X[m][1];   // ART stage progression (HARD CODED 6 months mean duration)
@@ -165,7 +182,7 @@ SEXP eppC(SEXP s_eppPopTS, SEXP s_projsteps, SEXP s_dt,
       grad[m][3] += 2.0 * X[m][2];
 
       for(size_t u = 0; u < TS; u++)
-	grad[m][u] -= cd4artmort[m-1][u] * X[m][u];  // HIV mortality
+  grad[m][u] -= cd4artmort[(m-1) + (DS-1)*cd4prog_i][u] * X[m][u];  // HIV mortality
     }
     
 
@@ -180,7 +197,7 @@ SEXP eppC(SEXP s_eppPopTS, SEXP s_projsteps, SEXP s_dt,
       for(size_t m = (specpop_percelig > 0) ? 1 : artelig_idx; m < DS; m++){
 	double artelig_m = (m < artelig_idx) ? specpop_percelig * X[m][0] : X[m][0];
 	artelig += artelig_m;
-	sum_mortweight += cd4artmort[m-1][0] * artelig_m;
+  sum_mortweight += cd4artmort[(m-1) + (DS-1)*cd4prog_i][0] * X[m][0];
       }
 
       // if transitioning from number to percentage, linearly scale up
@@ -208,7 +225,7 @@ SEXP eppC(SEXP s_eppPopTS, SEXP s_projsteps, SEXP s_dt,
       // determine rate to initiate each stage
       double artinitweight[DS], artstageinit[DS];
       for(size_t m = (specpop_percelig > 0) ? 1 : artelig_idx; m < DS; m++){
-	artinitweight[m] = (cd4artmort[m-1][0]/sum_mortweight + 1.0/artelig)/2.0;
+	artinitweight[m] = (cd4artmort[(m-1) + (DS-1)*cd4prog_i][0]/sum_mortweight + 1.0/artelig)/2.0;
 	double artelig_m = (m < artelig_idx) ? specpop_percelig * X[m][0] : X[m][0];
 	artstageinit[m] = art_anninits * artinitweight[m] * artelig_m;
 	artstageinit[m] = (artstageinit[m] > artelig_m/dt) ? artelig_m/dt : artstageinit[m]; // check not greater than number eligible
