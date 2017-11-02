@@ -1,6 +1,4 @@
-library(data.table)
-
-prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 2017.5, stop_collapse = FALSE, loc.table = loc.table) {
+prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 2017.5, stop_collapse = FALSE) {
     loc.table <- data.table(loc.table)
     if(stop_collapse) {
         collapse <- F
