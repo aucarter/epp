@@ -1,10 +1,11 @@
 prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 2017.5, stop_collapse = FALSE) {
     loc.table <- as.data.table(loc.table)
-    print(str(loc.table))
     if(stop_collapse) {
         collapse <- F
     } else {
+        print(is.data.table(loc.table))
         collapse <- loc.table[ihme_loc_id == loc, collapse_subpop]
+        print(is.data.table(loc.table))
         unaids.year <- loc.table[ihme_loc_id == loc, unaids_recent]
         dir <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/")
         pjnz <- paste0(dir, loc, ".PJNZ")        
@@ -35,7 +36,8 @@ prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 
 }
 
 collapse_epp <- function(loc) {
-
+    loc.table <- as.data.table(loc.table)
+    print(is.data.table(loc.table))
     unaids.year <- loc.table[ihme_loc_id == loc, unaids_recent]
     dir <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/")
     pjnz.list <- list.files(dir, pattern = "PJNZ", full.names = T)
