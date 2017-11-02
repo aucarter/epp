@@ -1,4 +1,4 @@
-prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 2017.5, stop_collapse = FALSE) {
+prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 2017.5, stop_collapse = FALSE, loc.table = loc.table) {
     if(stop_collapse) {
         collapse <- F
     } else {
