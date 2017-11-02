@@ -8,5 +8,6 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: mvtnorm,
-    anclik (>= 0.3)
+    anclik (>= 0.3),
+    data.table
 Suggests: XML
