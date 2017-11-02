@@ -1,25 +1,3 @@
-################################################################################
-## Purpose: 
-## Date created: 
-## Date modified:
-## Author: Austin Carter, aucarter@uw.edu
-## Run instructions: 
-
-### Setup
-windows <- Sys.info()[1][["sysname"]]=="Windows"
-root <- ifelse(windows,"J:/","/home/j/")
-user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
-code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/HIV/")
-
-## Packages
-library(data.table); library(epp);library(plyr)
-
-source(paste0(root, "Project/Mortality/shared/functions/get_locations.r"))
-loc.table <- data.table(get_locations(hiv_metadata = T))
-
-
-### Functions
-
 prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 2017.5, stop_collapse = FALSE) {
     if(stop_collapse) {
         collapse <- F
