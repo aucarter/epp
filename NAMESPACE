@@ -5,6 +5,8 @@ export(update.eppfp, prev, fnPregPrev, incid, ll, IMIS)
 export(read_epp_input, read_epp_data, read_epp_subpops, read_spu, read_spt)
 export(fitmod, simfit, prepare_epp_fit)
 export(prepare_ancrtcens_likdat)
+export(extend.trans.params, sub.prev.survey, sub.anc, sub.pop.params, calc.expand.pop, sub.on.art, sub.off.art, sub.cd4.prog)
+export(prep_epp_data, collapse_epp)
 
 S3method(simmod, eppfp)
 S3method(simfit, eppfit)
