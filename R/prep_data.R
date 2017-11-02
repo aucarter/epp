@@ -1,3 +1,7 @@
+assignInNamespace("cedta.override",
+                  c(data.table:::cedta.override,"<my-package-name>"),
+                  "data.table")
+
 prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 2017.5, stop_collapse = FALSE) {
     loc.table <- as.data.table(loc.table)
     if(stop_collapse) {
