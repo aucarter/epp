@@ -3,13 +3,10 @@ assignInNamespace("cedta.override",
                   "data.table")
 
 prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 2017.5, stop_collapse = FALSE) {
-    loc.table <- as.data.table(loc.table)
     if(stop_collapse) {
         collapse <- F
     } else {
-        print(is.data.table(loc.table))
         collapse <- loc.table[ihme_loc_id == loc, collapse_subpop]
-        print(is.data.table(loc.table))
         unaids.year <- loc.table[ihme_loc_id == loc, unaids_recent]
         dir <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/")
         pjnz <- paste0(dir, loc, ".PJNZ")        
@@ -39,14 +36,24 @@ prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 
     return(prepped.dt)
 }
 
+Mode <- function(x) {
+    ux <- unique(x)
+    ux[which.max(tabulate(match(x, ux)))]
+}
+
 collapse_epp <- function(loc) {
-    loc.table <- as.data.table(loc.table)
-    print(is.data.table(loc.table))
     unaids.year <- loc.table[ihme_loc_id == loc, unaids_recent]
     dir <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/")
     pjnz.list <- list.files(dir, pattern = "PJNZ", full.names = T)
     file.list <- grep(loc, pjnz.list, value = T)
+    
+    if(length(file.list) == 0) {
+        loc.name <- loc.table[ihme_loc_id == loc, location_name]
+        file.list <- grep(loc.name, pjnz.list, value = T)
+    }
+    ###########
     ## eppd
+    ###########
     eppd.list <- lapply(file.list, function(file) {
         pjnz <- file
         eppd <- read_epp_data(pjnz)
@@ -99,7 +106,9 @@ collapse_epp <- function(loc) {
     eppd.tot[[subpop.tot]]$hhs <- as.data.frame(hhs.sum)
     # eppd.tot[[subpop.tot]]$hhs <- as.data.frame(hhs.temp)
 
+    ###########
     ## epp.subp
+    ###########
     epp.subp.list <- lapply(file.list, function(file) {
         pjnz <- file
         epp.subp <- read_epp_subpops(pjnz)
@@ -119,10 +128,12 @@ collapse_epp <- function(loc) {
     epp.subp.tot$total <- as.data.frame(total.sum)
     epp.subp.tot$subpops[[subpop.tot]] <- as.data.frame(total.sum)
 
+    ###########
     ## epp.input
+    ###########
     epp.input.list <- lapply(file.list, function(file) {
         pjnz <- file
-        epp.subp <- read_epp_input(pjnz)
+        epp.input <- read_epp_input(pjnz)
     })
     epp.input.tot <- epp.input.list[[1]]
     attr(epp.input.tot,"country") <- subpop.tot
@@ -131,19 +142,19 @@ collapse_epp <- function(loc) {
     start.years <- unlist(lapply(epp.input.list, function(epp.input) {
         start.year <- epp.input$start.year
     }))
-    length(unique(start.years)) == 1
+    epp.input.tot$start.year <- Mode(start.years)
 
     # stop.year (check for difference)
     stop.years <- unlist(lapply(epp.input.list, function(epp.input) {
         stop.year <- epp.input$stop.year
     }))
-    length(unique(stop.years)) == 1
+    epp.input.tot$stop.year <- Mode(stop.years)
 
     # epidemic.start (check for difference)
     epidemic.starts <- unlist(lapply(epp.input.list, function(epp.input) {
         epidemic.start <- epp.input$epidemic.start
     }))
-    length(unique(epidemic.starts)) == 1
+    epp.input.tot$epidemic.start <- Mode(epidemic.starts)
 
     # epp.pop (sum and mean)
     epp.pop.temp <- data.table(do.call(rbind, lapply(epp.input.list, function(epp.input) {
@@ -175,35 +186,46 @@ collapse_epp <- function(loc) {
     infectreducs <- unlist(lapply(epp.input.list, function(epp.input) {
         infectreduc <- epp.input$infectreduc
     }))
-    length(unique(infectreducs)) == 1
+    epp.input.tot$infectreduc <- Mode(infectreducs)
 
     # epp.art (sum and mean) ** beware of percentages!!! also not sure whether 1stto2ndline is count or percent
-    epp.art.temp <- data.table(rbind.fill(lapply(epp.input.list, function(epp.input) {
+    epp.art.temp <- rbindlist(lapply(epp.input.list, function(epp.input) {
         epp.art <- epp.input$epp.art
-    })))
+    }), fill = T)
     epp.art.temp[is.na(m.isperc), m.isperc := "N"]
     epp.art.temp[is.na(f.isperc), f.isperc := "N"]
     if("P" %in% unique(c(epp.art.temp$m.isperc, epp.art.temp$f.isperc))) {
+        # Add prevalence
+        epp.prev <- unlist(lapply(file.list, function(pjnz) {
+            spu <- read_spu(pjnz)$prev
+            mean.spu <- rowMeans(spu)
+        }))
+        epp.prev.subset <- epp.prev[names(epp.prev) %in% paste0(unique(epp.art.temp$year))]
+
+        if(nrow(epp.art.temp) != length(epp.prev.subset)) {
+            stop("ART collapse problem")
+        }
+        epp.art.temp[, prev := epp.prev.subset]
+
+        # Add population
         pop <- epp.pop.temp[year %in% unique(epp.art.temp$year)]
         epp.art.temp <- cbind(epp.art.temp, pop[, .(pop15to49)])
-        epp.art.temp[m.isperc == "P", c("m.val", "f.val") := (((m.val + f.val) / 2) / 100) * (pop15to49 / 2)]
-        epp.art.temp[, pop15to49 := NULL]
+        epp.art.temp[m.isperc == "P", m.val := (weighted.mean(m.val, w = pop15to49 * prev) / .N), by = .(year)]
+        epp.art.temp[f.isperc == "P", f.val := (weighted.mean(f.val, w = pop15to49 * prev) / .N), by = .(year)]
+        epp.art.temp[, c("pop15to49", "prev") := NULL]
     }
+    epp.art.hold <- epp.art.temp[1:length(min(epp.art.temp$year):max(epp.art.temp$year)), .(m.isperc, f.isperc)]
     epp.art.temp[, m.isperc := NULL]
     epp.art.temp[, f.isperc := NULL]
     epp.art.sum <- epp.art.temp[, lapply(.SD, sum), by = .(year)]
     epp.art.mean <- epp.art.temp[, lapply(.SD, mean), by = .(year)]
-    Mode <- function(x) {
-        ux <- unique(x)
-        ux[which.max(tabulate(match(x, ux)))]
-    }
     epp.art.mode <- epp.art.temp[, lapply(.SD, Mode), by = .(year)]
     epp.art.comb <- cbind(epp.art.sum[, .(year, m.val, f.val, artdropout)], 
                             epp.art.mode[, .(cd4thresh)],
-                            epp.art.mean[, c("m.perc50plus", "f.perc50plus", "perc50plus", "1stto2ndline", "art15yr"), with = F])
-    epp.art.comb[, c("m.isperc", "f.isperc") := "N"]
+                            epp.art.mean[, c("m.perc50plus", "f.perc50plus", "perc50plus", "1stto2ndline", "art15yr"), with = F],
+                            epp.art.hold)
     epp.art.order <- epp.art.comb[, c("year", "m.isperc", "m.val", "f.isperc", "f.val", "cd4thresh", "m.perc50plus", "f.perc50plus", "perc50plus", "1stto2ndline", "art15yr"), with = F]
-    epp.input.tot$epp.art <- epp.art.order
+    epp.input.tot$epp.art <- as.data.frame(epp.art.order)
 
     # art.specpop (check for difference)
     art.specpop.temp <- data.table(do.call(rbind, lapply(epp.input.list, function(epp.input) {

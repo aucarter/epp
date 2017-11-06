@@ -19,16 +19,23 @@ aim.dir <- paste0(inputs.dir, "AIM_assumptions/")
 
 ### Code
 extend.trans.params <- function(dt, start.year, stop.year) {
-	## create time series of on/off art mortality and cd4 progression
-	n.years <- length(start.year:stop.year)
-	# mortality
-	single.year.cd4artmort <- attr(dt[[1]], "eppfp")$cd4artmort
-	time.series.cd4artmort <- do.call("rbind", rep(list(single.year.cd4artmort), n.years))
-	attr(dt[[1]], "eppfp")$cd4artmort <- time.series.cd4artmort
-	#cd4 progression
-	single.year.cd4prog <- attr(dt[[1]], "eppfp")$cd4prog
-	time.series.cd4prog <- do.call("rbind", rep(list(single.year.cd4prog), n.years))
-	attr(dt[[1]], "eppfp")$cd4prog <- time.series.cd4prog
+	for(n in names(dt)) {
+		## create time series of on/off art mortality and cd4 progression
+		n.years <- length(start.year:stop.year)
+		# mortality
+		single.year.cd4artmort <- attr(dt[[n]], "eppfp")$cd4artmort
+		time.series.cd4artmort <- do.call("rbind", rep(list(single.year.cd4artmort), n.years))
+		attr(dt[[n]], "eppfp")$cd4artmort <- time.series.cd4artmort
+		#cd4 progression
+		single.year.cd4prog <- attr(dt[[n]], "eppfp")$cd4prog
+		time.series.cd4prog <- do.call("rbind", rep(list(single.year.cd4prog), n.years))
+		attr(dt[[n]], "eppfp")$cd4prog <- time.series.cd4prog
+
+		attr(dt[[n]], "eppfp")$mortyears <- n.years
+		attr(dt[[n]], "eppfp")$cd4years <- n.years
+
+	}
+	return(dt)
 }
 
 sub.prev.survey <- function(dt, loc) {
