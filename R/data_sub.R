@@ -18,9 +18,11 @@ inputs.dir <- paste0(root,"/WORK/04_epi/01_database/02_data/hiv/04_models/gbd201
 aim.dir <- paste0(inputs.dir, "AIM_assumptions/")
 
 ### Code
-extend.trans.params <- function(dt, start.year, stop.year) {
+extend.trans.params <- function(dt) {
 	for(n in names(dt)) {
 		## create time series of on/off art mortality and cd4 progression
+		start.year <- floor(min(attr(dt[[n]], "eppfp")$proj.steps))
+		stop.year <- floor(max(attr(dt[[n]], "eppfp")$proj.steps))
 		n.years <- length(start.year:stop.year)
 		# mortality
 		single.year.cd4artmort <- attr(dt[[n]], "eppfp")$cd4artmort
@@ -28,12 +30,8 @@ extend.trans.params <- function(dt, start.year, stop.year) {
 		attr(dt[[n]], "eppfp")$cd4artmort <- time.series.cd4artmort
 		#cd4 progression
 		single.year.cd4prog <- attr(dt[[n]], "eppfp")$cd4prog
-		time.series.cd4prog <- do.call("rbind", rep(list(single.year.cd4prog), n.years))
+		time.series.cd4prog <- data.frame(do.call("rbind", rep(list(single.year.cd4prog), n.years)))
 		attr(dt[[n]], "eppfp")$cd4prog <- time.series.cd4prog
-
-		attr(dt[[n]], "eppfp")$mortyears <- n.years
-		attr(dt[[n]], "eppfp")$cd4years <- n.years
-
 	}
 	return(dt)
 }

@@ -5,8 +5,8 @@ fitmod <- function(obj, ..., B0 = 1e5, B = 1e4, B.re = 3000, number_k = 500, D=0
 
   ## ... : updates to fixed parameters (fp) object to specify fitting options
 
-  fp <- attr(obj, 'eppfp')
-  fp <- update(fp, ...)
+  fp <<- attr(obj, 'eppfp')
+  fp <<- update(fp, ...)
 
   ## Prepare likelihood data
   eppd <- attr(obj, "eppd")
@@ -29,7 +29,7 @@ fitmod <- function(obj, ..., B0 = 1e5, B = 1e4, B.re = 3000, number_k = 500, D=0
   else
     fp$ancrt <- "both"
 
-  likdat <- fnCreateLikDat(eppd, floor(fp$proj.steps[1]))
+  likdat <<- fnCreateLikDat(eppd, floor(fp$proj.steps[1]))
   
   ## If IMIS fails, start again
   fit <- try(stop(""), TRUE)

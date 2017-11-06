@@ -1,16 +1,13 @@
-assignInNamespace("cedta.override",
-                  c(data.table:::cedta.override,"<my-package-name>"),
-                  "data.table")
 
 prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 2017.5, stop_collapse = FALSE) {
     if(stop_collapse) {
         collapse <- F
     } else {
-        collapse <- loc.table[ihme_loc_id == loc, collapse_subpop]
-        unaids.year <- loc.table[ihme_loc_id == loc, unaids_recent]
-        dir <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/")
-        pjnz <- paste0(dir, loc, ".PJNZ")        
+        collapse <- loc.table[ihme_loc_id == loc, collapse_subpop]   
     }
+    unaids.year <- loc.table[ihme_loc_id == loc, unaids_recent]
+    dir <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/")
+    pjnz <- paste0(dir, loc, ".PJNZ")     
     if(collapse) {
         print("Collapsing subpopulations")
         epp_totals <- collapse_epp(loc)
@@ -31,7 +28,7 @@ prep_epp_data <- function(loc, popadjust = FALSE, popupdate = FALSE, proj.end = 
         prepped.dt <- val
 
     } else {
-        prepped.dt <- prepare_epp_fit(pjnz)
+        prepped.dt <- prepare_epp_fit(pjnz, proj.end = proj.end)
     }
     return(prepped.dt)
 }
